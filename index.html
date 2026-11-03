@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Hunter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0B1121;
+            --neon-blue: #00F0FF;
+            --neon-purple: #B026FF;
+            --neon-cyan: #06B6D4;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                linear-gradient(rgba(11, 17, 33, 0.9), rgba(11, 17, 33, 0.9)),
+                url('data:image/svg+xml;utf8,<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><text x="10" y="25" fill="rgba(0, 240, 255, 0.05)" font-family="monospace" font-size="14">01</text></svg>');
+            overflow-x: hidden;
+        }
+
+        .font-cyber { font-family: 'Orbitron', sans-serif; }
+        
+        .neon-text-blue {
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+        }
+        
+        .neon-border {
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue) inset, 0 0 10px var(--neon-blue);
+        }
+
+        .digit-card {
+            width: 60px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            background: rgba(6, 182, 212, 0.1);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .digit-card:active { cursor: grabbing; }
+        .digit-card:hover {
+            background: rgba(6, 182, 212, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .drop-slot {
+            width: 70px;
+            height: 80px;
+            border: 2px dashed rgba(176, 38, 255, 0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        .drop-slot.drag-over {
+            border-color: var(--neon-purple);
+            background: rgba(176, 38, 255, 0.2);
+            box-shadow: 0 0 15px var(--neon-purple);
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px var(--neon-blue); }
+            50% { box-shadow: 0 0 20px var(--neon-blue); }
+            100% { box-shadow: 0 0 5px var(--neon-blue); }
+        }
+        
+        .btn-cyber {
+            background: linear-gradient(45deg, #00F0FF, #B026FF);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-cyber:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--neon-purple);
+        }
+
+        .hidden-screen { display: none !important; }
+        
+        #toast-msg {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Toast Notification -->
+    <div id="toast-msg" class="bg-gray-800 border-2"></div>
+
+    <!-- MAIN MENU SCREEN -->
+    <div id="screen-main" class="flex-1 flex flex-col items-center justify-center p-6">
+        <div class="text-center mb-10">
+            <h1 class="text-5xl md:text-7xl font-cyber font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-2">
+                BINARY HUNTER
+            </h1>
+            <p class="text-cyan-300 text-xl tracking-widest uppercase">Hunt the Binary, Unlock the Challenge!</p>
+        </div>
+
+        <div class="bg-gray-900/80 p-8 rounded-xl neon-border w-full max-w-md backdrop-blur-sm">
+            <div class="mb-4">
+                <label class="block text-sm text-cyan-400 mb-2 font-cyber">NAMA PEMAIN</label>
+                <input type="text" id="input-name" placeholder="Masukkan nama anda..." class="w-full bg-gray-800 border border-cyan-700 text-white rounded p-3 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+            </div>
+            <div class="mb-8">
+                <label class="block text-sm text-cyan-400 mb-2 font-cyber">KELAS</label>
+                <input type="text" id="input-class" placeholder="Contoh: 2 Mawar" class="w-full bg-gray-800 border border-cyan-700 text-white rounded p-3 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+            </div>
+            
+            <div class="flex flex-col gap-4">
+                <button onclick="startGame()" class="btn-cyber text-lg">START GAME</button>
+                <button onclick="toggleHowToPlay()" class="border-2 border-purple-500 text-purple-400 hover:bg-purple-900/30 p-3 rounded font-cyber transition">HOW TO PLAY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOW TO PLAY MODAL -->
+    <div id="modal-how-to" class="fixed inset-0 bg-black/90 z-50 hidden-screen flex items-center justify-center p-4">
+        <div class="bg-gray-900 border-2 border-cyan-500 rounded-xl p-8 max-w-lg w-full">
+            <h2 class="text-3xl font-cyber text-cyan-400 mb-4 border-b border-gray-700 pb-2">CARA BERMAIN</h2>
+            <ul class="list-disc pl-5 text-gray-300 space-y-3 mb-6">
+                <li>Sistem akan memaparkan nombor perduaan secara rawak (4-bit atau 8-bit).</li>
+                <li>Tukarkan nombor tersebut kepada nombor perpuluhan.</li>
+                <li>Tarik (Drag) kad nombor ke dalam kotak ruang jawapan mengikut urutan yang betul.</li>
+                <li>Tekan butang <strong class="text-cyan-400">SUBMIT ANSWER</strong> untuk menyemak.</li>
+                <li>Jawapan betul: <strong class="text-green-400">+10 mata</strong>.</li>
+                <li>Jawapan salah: <strong class="text-red-400">-1 nyawa</strong>.</li>
+                <li>Permainan tamat apabila nyawa mencapai 0.</li>
+            </ul>
+            <button onclick="toggleHowToPlay()" class="w-full btn-cyber">TUTUP</button>
+        </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="screen-game" class="hidden-screen flex-1 flex flex-col p-4 md:p-8 max-w-5xl mx-auto w-full">
+        <!-- Header Stats -->
+        <div class="flex justify-between items-center bg-gray-900/80 p-4 rounded-lg border border-gray-700 mb-8">
+            <div class="text-center">
+                <p class="text-xs text-gray-400 font-cyber">SKOR</p>
+                <p id="ui-score" class="text-2xl font-bold text-cyan-400">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-gray-400 font-cyber">MASA</p>
+                <p id="ui-time" class="text-2xl font-bold text-white">00:00</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-gray-400 font-cyber">NYAWA</p>
+                <p id="ui-lives" class="text-2xl font-bold text-red-500 tracking-widest">❤️❤️❤️</p>
+            </div>
+        </div>
+
+        <!-- Question Area -->
+        <div class="flex-1 flex flex-col items-center justify-center">
+            <h2 class="text-xl text-purple-400 font-cyber mb-2">TUKAR KEPADA PERPULUHAN</h2>
+            <div class="bg-gray-800/80 px-12 py-6 rounded-2xl border border-cyan-500/30 shadow-[0_0_30px_rgba(0,240,255,0.1)] mb-8">
+                <span id="ui-question" class="text-6xl md:text-8xl font-black font-cyber tracking-widest neon-text-blue">1010</span>
+                <sub class="text-2xl text-cyan-600 font-cyber">2</sub>
+            </div>
+
+            <!-- Drop Zones (Generated Dynamically) -->
+            <div id="drop-container" class="flex gap-4 mb-8 min-h-[80px]">
+                <!-- Slots go here -->
+            </div>
+            
+            <div class="flex gap-4 mb-10">
+                <button onclick="clearAnswer()" class="border border-red-500 text-red-400 hover:bg-red-500/20 px-6 py-2 rounded font-cyber">CLEAR</button>
+                <button onclick="checkAnswer()" class="btn-cyber px-10">SUBMIT ANSWER</button>
+            </div>
+
+            <!-- Draggable Digits (0-9) -->
+            <div class="w-full max-w-2xl bg-gray-900/60 p-6 rounded-xl border border-gray-700">
+                <p class="text-center text-sm text-gray-400 mb-4 font-cyber">TARIK (DRAG) NOMBOR KE RUANG JAWAPAN</p>
+                <div class="flex flex-wrap justify-center gap-3" id="digits-bank">
+                    <!-- Digits generated via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="screen-game-over" class="hidden-screen flex-1 flex flex-col items-center justify-center p-6">
+        <div class="bg-gray-900 border-t-4 border-purple-500 p-8 rounded-xl shadow-2xl w-full max-w-lg text-center">
+            <h1 class="text-5xl font-cyber text-red-500 mb-2">GAME OVER</h1>
+            <p id="go-player-info" class="text-xl text-cyan-300 mb-6">Pemain: Ali (2 Mawar)</p>
+            
+            <div class="grid grid-cols-2 gap-4 text-left bg-gray-800 p-4 rounded-lg mb-6">
+                <div class="text-gray-400">Skor Akhir:</div>
+                <div id="go-score" class="text-cyan-400 font-bold text-xl text-right">0</div>
+                
+                <div class="text-gray-400">Masa:</div>
+                <div id="go-time" class="text-white font-bold text-right">00:00</div>
+                
+                <div class="text-gray-400">Soalan Dijawab:</div>
+                <div id="go-total" class="text-white font-bold text-right">0</div>
+                
+                <div class="text-gray-400">Jawapan Betul:</div>
+                <div id="go-correct" class="text-green-400 font-bold text-right">0</div>
+                
+                <div class="text-gray-400">Jawapan Salah:</div>
+                <div id="go-wrong" class="text-red-400 font-bold text-right">0</div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="btn-save" onclick="saveRecord()" class="btn-cyber w-full bg-gradient-to-r from-green-400 to-cyan-500">SAVE RECORD</button>
+                <button onclick="resetGame()" class="border-2 border-cyan-500 text-cyan-400 hover:bg-cyan-900/30 p-3 rounded font-cyber transition w-full">PLAY AGAIN</button>
+                <button onclick="goToMenu()" class="text-gray-400 hover:text-white underline mt-2">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOCK GOOGLE SCRIPT API FOR PREVIEW ENVIRONMENT -->
+    <script>
+        // Ini adalah fallback supaya sistem berjalan walaupun diuji di luar persekitaran Google Apps Script
+        if (typeof google === 'undefined') {
+            window.google = {
+                script: {
+                    run: {
+                        withSuccessHandler: function(onSuccess) {
+                            return {
+                                withFailureHandler: function(onFailure) {
+                                    return {
+                                        savePlayerRecord: function(data) {
+                                            console.log("Mock Saving to Google Sheets:", data);
+                                            // Simulasi delay rangkaian
+                                            setTimeout(function() {
+                                                onSuccess("Rekod berjaya disimpan (Simulasi)");
+                                            }, 1500);
+                                        }
+                                    };
+                                }
+                            };
+                        }
+                    }
+                }
+            };
+        }
+    </script>
+
+    <!-- GAME LOGIC -->
+    <script>
+        // --- STATE PEMBOLEHUBAH ---
+        let player = { name: '', class: '' };
+        let gameState = {
+            score: 0,
+            lives: 3,
+            timeElapsed: 0,
+            timerInterval: null,
+            totalAnswered: 0,
+            correct: 0,
+            wrong: 0,
+            currentBinary: '',
+            currentDecimal: 0,
+            usedQuestions: [] // Elak soalan berulang
+        };
+
+        // --- NAVIGASI SKRIN ---
+        function showScreen(screenId) {
+            document.getElementById('screen-main').classList.add('hidden-screen');
+            document.getElementById('screen-game').classList.add('hidden-screen');
+            document.getElementById('screen-game-over').classList.add('hidden-screen');
+            document.getElementById(screenId).classList.remove('hidden-screen');
+        }
+
+        function toggleHowToPlay() {
+            const modal = document.getElementById('modal-how-to');
+            modal.classList.toggle('hidden-screen');
+        }
+
+        function goToMenu() {
+            showScreen('screen-main');
+        }
+
+        // --- SISTEM TOAST (Mesej Visual) ---
+        function showToast(message, isSuccess) {
+            const toast = document.getElementById('toast-msg');
+            toast.textContent = message;
+            toast.style.borderColor = isSuccess ? '#4ade80' : '#f87171';
+            toast.style.color = isSuccess ? '#4ade80' : '#f87171';
+            toast.style.opacity = '1';
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+
+        // --- PERMULAAN PERMAINAN ---
+        function startGame() {
+            const nameInput = document.getElementById('input-name').value.trim();
+            const classInput = document.getElementById('input-class').value.trim();
+
+            if (!nameInput || !classInput) {
+                alert("Sila masukkan Nama dan Kelas anda.");
+                return;
+            }
+
+            player.name = nameInput;
+            player.class = classInput;
+            
+            resetGameState();
+            buildDigitBank();
+            generateQuestion();
+            startTimer();
+            updateUI();
+            
+            showScreen('screen-game');
+        }
+
+        function resetGameState() {
+            gameState = {
+                score: 0,
+                lives: 3,
+                timeElapsed: 0,
+                timerInterval: null,
+                totalAnswered: 0,
+                correct: 0,
+                wrong: 0,
+                currentBinary: '',
+                currentDecimal: 0,
+                usedQuestions: []
+            };
+            document.getElementById('btn-save').disabled = false;
+            document.getElementById('btn-save').innerText = "SAVE RECORD";
+            document.getElementById('btn-save').classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function resetGame() {
+            resetGameState();
+            generateQuestion();
+            startTimer();
+            updateUI();
+            showScreen('screen-game');
+        }
+
+        // --- SISTEM MASA ---
+        function startTimer() {
+            clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeElapsed++;
+                updateTimerUI();
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            const minutes = Math.floor(gameState.timeElapsed / 60).toString().padStart(2, '0');
+            const seconds = (gameState.timeElapsed % 60).toString().padStart(2, '0');
+            document.getElementById('ui-time').textContent = `${minutes}:${seconds}`;
+        }
+
+        // --- PENJANAAN SOALAN ---
+        function generateQuestion() {
+            // Tentukan panjang bit (4-bit atau 8-bit)
+            const is8Bit = Math.random() > 0.5;
+            let decimalValue;
+            
+            do {
+                if (is8Bit) {
+                    decimalValue = Math.floor(Math.random() * (255 - 16 + 1)) + 16; // 16 hingga 255
+                } else {
+                    decimalValue = Math.floor(Math.random() * 15) + 1; // 1 hingga 15
+                }
+            } while (gameState.usedQuestions.includes(decimalValue) && gameState.usedQuestions.length < 255);
+
+            gameState.usedQuestions.push(decimalValue);
+            gameState.currentDecimal = decimalValue;
+            
+            // Tukar ke format perduaan (pad dengan 0 supaya sentiasa 4 atau 8 bit)
+            let binaryStr = decimalValue.toString(2);
+            const targetLength = is8Bit ? 8 : 4;
+            gameState.currentBinary = binaryStr.padStart(targetLength, '0');
+
+            // Papar Soalan
+            document.getElementById('ui-question').textContent = gameState.currentBinary;
+
+            // Bina Ruang Jawapan
+            buildDropSlots(gameState.currentDecimal.toString().length);
+        }
+
+        // --- SISTEM DRAG & DROP ---
+        function buildDigitBank() {
+            const bank = document.getElementById('digits-bank');
+            bank.innerHTML = '';
+            for (let i = 0; i <= 9; i++) {
+                const card = document.createElement('div');
+                card.className = 'digit-card font-cyber';
+                card.textContent = i;
+                card.setAttribute('draggable', 'true');
+                card.dataset.val = i;
+                
+                // Event Listeners untuk drag
+                card.addEventListener('dragstart', handleDragStart);
+                
+                bank.appendChild(card);
+            }
+        }
+
+        function buildDropSlots(count) {
+            const container = document.getElementById('drop-container');
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'drop-slot font-cyber text-2xl font-bold';
+                slot.dataset.index = i;
+                
+                // Event Listeners untuk drop
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+                
+                // Fungsi klik untuk buang nombor
+                slot.addEventListener('click', function() {
+                    this.textContent = '';
+                });
+
+                container.appendChild(slot);
+            }
+        }
+
+        let draggedValue = null;
+
+        function handleDragStart(e) {
+            draggedValue = e.target.dataset.val;
+            e.dataTransfer.setData('text/plain', draggedValue);
+            e.dataTransfer.effectAllowed = 'copy';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Mesti dipanggil untuk membenarkan drop
+            e.dataTransfer.dropEffect = 'copy';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const val = e.dataTransfer.getData('text/plain');
+            
+            // Masukkan nilai ke dalam slot
+            if (val !== null && val !== '') {
+                e.currentTarget.textContent = val;
+                e.currentTarget.style.color = '#00F0FF';
+                e.currentTarget.style.textShadow = '0 0 10px #00F0FF';
+            }
+        }
+
+        function clearAnswer() {
+            const slots = document.querySelectorAll('.drop-slot');
+            slots.forEach(slot => {
+                slot.textContent = '';
+            });
+        }
+
+        // --- PENYEMAKAN JAWAPAN ---
+        function checkAnswer() {
+            const slots = document.querySelectorAll('.drop-slot');
+            let playerAnswerStr = '';
+            
+            // Kumpul jawapan dari kotak
+            let isComplete = true;
+            slots.forEach(slot => {
+                if (slot.textContent === '') {
+                    isComplete = false;
+                }
+                playerAnswerStr += slot.textContent;
+            });
+
+            if (!isComplete) {
+                showToast("Sila isikan semua ruang jawapan!", false);
+                return;
+            }
+
+            const playerAnswerNum = parseInt(playerAnswerStr, 10);
+            gameState.totalAnswered++;
+
+            if (playerAnswerNum === gameState.currentDecimal) {
+                // JAWAPAN BETUL
+                gameState.score += 10;
+                gameState.correct++;
+                showToast("BETUL! +10 Mata", true);
+                generateQuestion(); // Soalan seterusnya
+            } else {
+                // JAWAPAN SALAH
+                gameState.lives--;
+                gameState.wrong++;
+                showToast("SALAH! Hilang 1 Nyawa", false);
+                clearAnswer(); // Minta pemain cuba lagi
+                
+                if (gameState.lives <= 0) {
+                    gameState.lives = 0;
+                    endGame();
+                }
+            }
+            updateUI();
+        }
+
+        // --- KEMASKINI UI ---
+        function updateUI() {
+            document.getElementById('ui-score').textContent = gameState.score;
+            
+            // Papar Nyawa (Ikon Hati)
+            let hearts = '';
+            for (let i = 0; i < gameState.lives; i++) hearts += '❤️';
+            document.getElementById('ui-lives').textContent = hearts || '💀';
+        }
+
+        // --- TAMAT PERMAINAN ---
+        function endGame() {
+            clearInterval(gameState.timerInterval);
+            
+            // Kemaskini data di skrin Game Over
+            document.getElementById('go-player-info').textContent = `Pemain: ${player.name} (${player.class})`;
+            document.getElementById('go-score').textContent = gameState.score;
+            document.getElementById('go-time').textContent = document.getElementById('ui-time').textContent;
+            document.getElementById('go-total').textContent = gameState.totalAnswered;
+            document.getElementById('go-correct').textContent = gameState.correct;
+            document.getElementById('go-wrong').textContent = gameState.wrong;
+
+            showScreen('screen-game-over');
+        }
+
+        // --- GOOGLE APPS SCRIPT: SIMPAN REKOD ---
+        function saveRecord() {
+            const btn = document.getElementById('btn-save');
+            btn.innerText = "MENYIMPAN...";
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            const recordData = {
+                name: player.name,
+                className: player.class,
+                score: gameState.score,
+                timeStr: document.getElementById('ui-time').textContent,
+                livesLeft: gameState.lives
+            };
+
+            // Panggilan ke Code.gs
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    btn.innerText = "BERJAYA DISIMPAN!";
+                    btn.classList.replace('from-green-400', 'from-gray-500');
+                    btn.classList.replace('to-cyan-500', 'to-gray-600');
+                    showToast("Rekod berjaya disimpan di Google Sheets", true);
+                })
+                .withFailureHandler(function(error) {
+                    btn.innerText = "GAGAL SIMPAN. CUBA LAGI.";
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    showToast("Ralat: Gagal menyimpan rekod.", false);
+                    console.error("Save Error:", error);
+                })
+                .savePlayerRecord(recordData);
+        }
+
+    </script>
+</body>
+</html>
